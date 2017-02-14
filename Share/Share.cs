@@ -1,4 +1,5 @@
-﻿using Oxide.Core.Plugins;
+﻿#define DEBUG
+using Oxide.Core.Plugins;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,7 +8,6 @@ using Oxide.Game.Rust.Libraries.Covalence;
 using Oxide.Core.Libraries.Covalence;
 using System.Text;
 using Newtonsoft.Json.Linq;
-
 
 
 namespace Oxide.Plugins
@@ -33,7 +33,8 @@ namespace Oxide.Plugins
         //////////////////////////////////////////////////////////////////////////////////////////
         void Loaded()
         {
-            //cmd.AddChatCommand("sh+", this, "testCMD");
+            cmd.AddChatCommand("sh+", this, "cmdShareShort");
+            cmd.AddChatCommand("sh-", this, "cmdShareShort");
             // Use string interpolation to format a float with 3 decimal points instead of calling string.Format()
             codelockwhitelist = typeof(CodeLock).GetField("whitelistPlayers", (BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic));
 
@@ -84,13 +85,40 @@ namespace Oxide.Plugins
 
         #region Commands
         [ChatCommand("share")]
-        void cmdAR(BasePlayer player, string command, string[] args)
+        void cmdShare(BasePlayer player, string command, string[] args)
+        {
+            ShowCommandHelp(player);
+            return;
+        }
+
+        //[ChatCommand("share")]
+        void cmdShareShort(BasePlayer player, string command, string[] args)
         {
             DebugMessage("Share command was used by: " + player.displayName);
 
+            int bitmap = 0;
             bool bCodelock = false;
             bool bCupboard = false;
             bool bAutoturret = false;
+
+#if DEBUG
+            DebugMessage(command);
+            foreach(string arg in args)
+            {
+                DebugMessage(arg);
+            }
+
+            switch (command)
+            {
+                case "sh+":
+                    bitmap += 1;
+                    break;
+                case "sh-":
+                    break;
+                default:
+                    return;
+            }
+#endif
 
             //if(player.net.connection.authLevel < 2)
             //{
@@ -796,7 +824,7 @@ namespace Oxide.Plugins
         }
         #endregion
 
-        #region Debug
+        #region Messages
         void DebugMessage(string msg) { Debug.Log("[Share] " + msg); }
         #endregion
     }
