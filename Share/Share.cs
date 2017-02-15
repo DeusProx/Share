@@ -16,21 +16,20 @@ namespace Oxide.Plugins
     [Description("Share cupboards, codelocks and autoturrets")]
     public class Share : RustPlugin
     {
-        #region Initializing
+        #region Fields  
         [PluginReference] private Plugin PlayerDatabase;
         [PluginReference] private Plugin Friends;
         [PluginReference] private Plugin Clans;
 
-        private bool DEBUG = false;
-        private FieldInfo codelockwhitelist;
-        private float radius = 100.0F; // m?
+        private ConfigData configData;
 
+        private FieldInfo codelockwhitelist;
+        private float radius = 100.0F;
+        #endregion
 
         // Define a shortcut property to get the amount of seconds since the server started
 
-        //////////////////////////////////////////////////////////////////////////////////////////
-        ///// 
-        //////////////////////////////////////////////////////////////////////////////////////////
+        #region Initializing
         void Loaded()
         {
             cmd.AddChatCommand("sh+", this, "cmdShareShort");
@@ -50,14 +49,56 @@ namespace Oxide.Plugins
             else
                 DebugMessage("Clans Plugin found");
 
+            DebugMessage(this.configData.CommonSettings.ChatPrefix);
+
         }
         #endregion
 
         #region Configuration
-        #region Default
-        #endregion
-        #region Setup
-        #endregion
+        class CommonSettings
+        {
+            public string ChatPrefix { get; set; }
+            public string ShareCommand { get; set; }
+            public string UnshareCommand { get; set; }
+        }
+        class Settings
+        {
+            public bool AllowCupboardSharing { get; set; }
+            public bool AllowCodelockSharing { get; set; }
+            public bool AllowAutoturretSharing { get; set; }
+        }
+        class ConfigData
+        {
+            public CommonSettings CommonSettings { get; set; }
+            public Settings Settings { get; set; }
+        }
+
+        private void LoadVariables()
+        {
+            LoadConfigVariables();
+            SaveConfig();
+        }
+        protected override void LoadDefaultConfig()
+        {
+            var config = new ConfigData
+            {
+                CommonSettings = new CommonSettings
+                {
+                    ChatPrefix = "<color=cyan>[Share]</color>",
+                    ShareCommand = "sh+",
+                    UnshareCommand = "sh-"
+                },
+                Settings = new Settings
+                {
+                    AllowCupboardSharing = true,
+                    AllowCodelockSharing = true,
+                    AllowAutoturretSharing = true
+                }
+            };
+            SaveConfig(config);
+        }
+        private void LoadConfigVariables() => configData = Config.ReadObject<ConfigData>();
+        void SaveConfig(ConfigData config) => Config.WriteObject(config, true);
         #endregion
 
         #region Strange
@@ -103,7 +144,7 @@ namespace Oxide.Plugins
 
 #if DEBUG
             DebugMessage(command);
-            foreach(string arg in args)
+            foreach (string arg in args)
             {
                 DebugMessage(arg);
             }
@@ -825,7 +866,7 @@ namespace Oxide.Plugins
         #endregion
 
         #region Messages
-        void DebugMessage(string msg) { Debug.Log("[Share] " + msg); }
+        public void DebugMessage(string msg) { Debug.Log("[Share] " + msg); }
         #endregion
     }
 }
