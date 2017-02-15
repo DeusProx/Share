@@ -29,7 +29,7 @@ namespace Oxide.Plugins
 
         // Define a shortcut property to get the amount of seconds since the server started
 
-        #region Initializing
+        #region Hooks
         void Loaded()
         {
             cmd.AddChatCommand("sh+", this, "cmdShareShort");
@@ -48,9 +48,6 @@ namespace Oxide.Plugins
                 DebugMessage("Clans Plugin not found");
             else
                 DebugMessage("Clans Plugin found");
-
-            DebugMessage(this.configData.CommonSettings.ChatPrefix);
-
         }
         #endregion
 
@@ -125,6 +122,12 @@ namespace Oxide.Plugins
         #endregion
 
         #region Commands
+        [Command("globa.shtest")]
+        void test()
+        {
+            DebugMessage(this.configData.CommonSettings.ChatPrefix);
+        }
+
         [ChatCommand("share")]
         void cmdShare(BasePlayer player, string command, string[] args)
         {
