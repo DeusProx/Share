@@ -48,7 +48,7 @@ namespace Oxide.Plugins
                 DebugMessage("Clans Plugin found");
 
             // Load the config file
-            LoadConfig();
+            LoadConfig2();
 
             // Register Commands
             if (string.IsNullOrEmpty(pluginConfig.Commands.ShareCommand))
@@ -92,8 +92,8 @@ namespace Oxide.Plugins
         }
 
         // Overwrite all three virtual methods for read/write configuration file
-        protected override void SaveConfig() => Config.WriteObject(pluginConfig, true);
-        protected override void LoadConfig() => pluginConfig = Config.ReadObject<PluginConfig>();
+        private void SaveConfig(PluginConfig config) => Config.WriteObject(config, true);
+        private void LoadConfig2() => pluginConfig = Config.ReadObject<PluginConfig>();
         protected override void LoadDefaultConfig()  // Creates default configuration file
         {
             var defaultConfig = new PluginConfig
@@ -114,11 +114,11 @@ namespace Oxide.Plugins
                     Radius = 100.0F
                 }
             };
-            Config.WriteObject(defaultConfig, true);
+            SaveConfig(defaultConfig);
         }
         #endregion
 
-        #region Strange
+        /*#region Strange
         class ARPlayer
         {
             public string name;
@@ -139,7 +139,7 @@ namespace Oxide.Plugins
                 basePlayer = bp;
             }
         }
-        #endregion
+        #endregion*/
         
         #region Commands
         [ChatCommand("test")]
