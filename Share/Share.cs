@@ -120,9 +120,9 @@ namespace Oxide.Plugins
             }
         }
         #endregion
-
+        
         #region Commands
-        [Command("globa.shtest")]
+        [ChatCommand("test")]
         void test()
         {
             DebugMessage(this.configData.CommonSettings.ChatPrefix);
