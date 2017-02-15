@@ -21,10 +21,9 @@ namespace Oxide.Plugins
         [PluginReference] private Plugin Friends;
         [PluginReference] private Plugin Clans;
 
-        private ConfigData configData;
+        private PluginConfig pluginConfig;
 
         private FieldInfo codelockwhitelist;
-        private float radius = 100.0F;
         #endregion
 
         // Define a shortcut property to get the amount of seconds since the server started
@@ -32,11 +31,10 @@ namespace Oxide.Plugins
         #region Hooks
         void Loaded()
         {
-            cmd.AddChatCommand("sh+", this, "cmdShareShort");
-            cmd.AddChatCommand("sh-", this, "cmdShareShort");
             // Use string interpolation to format a float with 3 decimal points instead of calling string.Format()
             codelockwhitelist = typeof(CodeLock).GetField("whitelistPlayers", (BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic));
 
+            // Check if all dependencies are there
             Friends = plugins.Find("Friends");
             if (Friends == null)
                 DebugMessage("Friends Plugin not found");
@@ -48,54 +46,76 @@ namespace Oxide.Plugins
                 DebugMessage("Clans Plugin not found");
             else
                 DebugMessage("Clans Plugin found");
+
+            // Load the config file
+            LoadConfig();
+
+            // Register Commands
+            if (string.IsNullOrEmpty(pluginConfig.Commands.ShareCommand))
+                DebugMessage("No valid ShareCommand in config.");
+            else
+                cmd.AddChatCommand(pluginConfig.Commands.ShareCommand, this, "cmdShareShort");
+
+            if (string.IsNullOrEmpty(pluginConfig.Commands.UnshareCommand))
+                DebugMessage("No valid UnshareCommand in config.");
+            else
+            {
+                if (string.Equals(pluginConfig.Commands.ShareCommand, pluginConfig.Commands.UnshareCommand))
+                    DebugMessage("ShareCommand & UnshareCommand are the same.");
+                else
+                    cmd.AddChatCommand(pluginConfig.Commands.UnshareCommand, this, "cmdShareShort");
+            }
         }
         #endregion
 
         #region Configuration
-        class CommonSettings
+        // Classes for easier handling of config
+        class PluginConfig
+        {
+            public General General { get; set; }
+            public Commands Commands { get; set; }
+        }
+        class General
         {
             public string ChatPrefix { get; set; }
+            public bool UsePermission { get; set; }
+            public string PermissionName { get; set; }
+        }
+        class Commands
+        {
             public string ShareCommand { get; set; }
             public string UnshareCommand { get; set; }
-        }
-        class Settings
-        {
             public bool AllowCupboardSharing { get; set; }
             public bool AllowCodelockSharing { get; set; }
             public bool AllowAutoturretSharing { get; set; }
-        }
-        class ConfigData
-        {
-            public CommonSettings CommonSettings { get; set; }
-            public Settings Settings { get; set; }
+            public float Radius { get; set; }
         }
 
-        private void LoadVariables()
+        // Overwrite all three virtual methods for read/write configuration file
+        protected override void SaveConfig() => Config.WriteObject(pluginConfig, true);
+        protected override void LoadConfig() => pluginConfig = Config.ReadObject<PluginConfig>();
+        protected override void LoadDefaultConfig()  // Creates default configuration file
         {
-            LoadConfigVariables();
-            SaveConfig();
-        }
-        protected override void LoadDefaultConfig()
-        {
-            var config = new ConfigData
+            var defaultConfig = new PluginConfig
             {
-                CommonSettings = new CommonSettings
+                General = new General
                 {
                     ChatPrefix = "<color=cyan>[Share]</color>",
-                    ShareCommand = "sh+",
-                    UnshareCommand = "sh-"
+                    UsePermission = false,
+                    PermissionName = "share"
                 },
-                Settings = new Settings
+                Commands = new Commands
                 {
+                    ShareCommand = "sh+",
+                    UnshareCommand = "sh-",
                     AllowCupboardSharing = true,
                     AllowCodelockSharing = true,
-                    AllowAutoturretSharing = true
+                    AllowAutoturretSharing = true,
+                    Radius = 100.0F
                 }
             };
-            SaveConfig(config);
+            Config.WriteObject(defaultConfig, true);
         }
-        private void LoadConfigVariables() => configData = Config.ReadObject<ConfigData>();
-        void SaveConfig(ConfigData config) => Config.WriteObject(config, true);
         #endregion
 
         #region Strange
@@ -123,11 +143,13 @@ namespace Oxide.Plugins
         
         #region Commands
         [ChatCommand("test")]
-        void test()
+        void test(BasePlayer player, string command, string[] args)
         {
-            DebugMessage(this.configData.CommonSettings.ChatPrefix);
+            //if(this)
+            //DebugMessage(configData.CommonSettings.ChatPrefix);
         }
 
+        // if someone writes /share in the chat give him the help text
         [ChatCommand("share")]
         void cmdShare(BasePlayer player, string command, string[] args)
         {
@@ -135,10 +157,8 @@ namespace Oxide.Plugins
             return;
         }
 
-        //[ChatCommand("share")]
         void cmdShareShort(BasePlayer player, string command, string[] args)
         {
-            DebugMessage("Share command was used by: " + player.displayName);
 
             int bitmap = 0;
             bool bCodelock = false;
@@ -355,7 +375,7 @@ namespace Oxide.Plugins
         {
             var sb = new StringBuilder();
             sb.AppendLine("<size=16>Share</size> by DeusProx");
-            sb.AppendLine("<size=12>Authorise players at your items in a " + radius + "m radius around you.</size>");
+            sb.AppendLine("<size=12>Authorise players at your items in a " + pluginConfig.Commands.Radius + "m radius around you.</size>");
             sb.AppendLine("<color=#FFD479>/ar show [cl|cb|at|all]</color><size=12>\nShow the authorisation status.</size>");
             sb.AppendLine("<color=#FFD479>/ar add <player> [cl|cb|at|all]</color><size=12>\nAdd a player to the authorisation lists</size>");
             sb.AppendLine("<color=#FFD479>/ar remove <player> [cl|cb|at|all]</color><size=12>\nRemove a player from the authorisation lists</size>");
@@ -376,7 +396,7 @@ namespace Oxide.Plugins
             var codelocks = new Dictionary<int, CodeLock>();
             var autoturrets = new Dictionary<int, AutoTurret>();
 
-            FindItemsToRegister(player, radius, bCodelock, bCupboard, bAutoturret, cupboards, codelocks, autoturrets);
+            FindItemsToRegister(player, pluginConfig.Commands.Radius, bCodelock, bCupboard, bAutoturret, cupboards, codelocks, autoturrets);
 
             var sbChat = new StringBuilder();
             var sbConsole = new StringBuilder();
@@ -445,7 +465,7 @@ namespace Oxide.Plugins
             var autoturrets = new Dictionary<int, AutoTurret>();
 
             int count = 0;
-            FindItemsToRegister(player, radius, bCodelock, bCupboard, bAutoturret, cupboards, codelocks, autoturrets);
+            FindItemsToRegister(player, pluginConfig.Commands.Radius, bCodelock, bCupboard, bAutoturret, cupboards, codelocks, autoturrets);
 
             foreach (var foundPlayer in addPlayerList)
             {
@@ -484,7 +504,7 @@ namespace Oxide.Plugins
             var autoturrets = new Dictionary<int, AutoTurret>();
 
             int count = 0;
-            FindItemsToRegister(player, radius, bCodelock, bCupboard, bAutoturret, cupboards, codelocks, autoturrets);
+            FindItemsToRegister(player, pluginConfig.Commands.Radius, bCodelock, bCupboard, bAutoturret, cupboards, codelocks, autoturrets);
 
             foreach (var foundPlayer in removePlayerList)
             {
