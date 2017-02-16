@@ -9,13 +9,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    enum WantedEntityType : uint
-    {
-        CB = 0x0001,
-        CL = 0x0002,
-        AT = 0x0004,
-        ALL = AT + CB + CL
-    }
+
 
     [Info("Share", "DeusProx", "0.1.0", ResourceId = 0000)]
     [Description("Share cupboards, codelocks and autoturrets")]
@@ -28,6 +22,14 @@ namespace Oxide.Plugins
         private Plugin Friends;
         [PluginReference]
         private Plugin Clans;
+
+        enum WantedEntityType : uint
+        {
+            CB = 0x0001,
+            CL = 0x0002,
+            AT = 0x0004,
+            ALL = AT + CB + CL
+        }
 
         private PluginConfig pluginConfig;
 
@@ -225,15 +227,17 @@ namespace Oxide.Plugins
         // Finds all entities a player owns on a certain radius & returns them
         private List<BaseEntity> FindItems(BasePlayer player, float radius, WantedEntityType entityMask)
         {
-            Collider[] hittedColliders = Physics.OverlapSphere(player.transform.position, radius);
+            Dictionary<int, int> checkedInstanceIDs = new Dictionary<int, int>();
             List<BaseEntity> foundItems = new List<BaseEntity>();
 
             int a = 0, b = 0, c = 0, d = 0;
-            foreach (var collider in hittedColliders)
+            foreach (var collider in Physics.OverlapSphere(player.transform.position, radius))
             {
                 BaseEntity entity = collider.gameObject.ToBaseEntity();
-                if (entity && entity.OwnerID == player.userID)
+                if (entity && entity.OwnerID == player.userID && !checkedInstanceIDs.ContainsKey(entity.GetInstanceID()))
                 {
+                    checkedInstanceIDs.Add(entity.GetInstanceID(), 1);
+
                     if (IsBitSet(entityMask, WantedEntityType.AT) && entity is AutoTurret)
                     {
                         a++;
@@ -241,6 +245,7 @@ namespace Oxide.Plugins
                     if (IsBitSet(entityMask, WantedEntityType.CB) && entity is BuildingPrivlidge)
                     {
                         b++;
+                        DebugMessage(""+entity.GetInstanceID());
                     }
                     if (IsBitSet(entityMask, WantedEntityType.CL) && entity is Door)
                     {
