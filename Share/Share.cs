@@ -58,6 +58,10 @@ namespace Oxide.Plugins
             // Load the config file
             LoadFromConfigFile();
 
+            // Unsubscribe from Hooks if necessary
+            if (!pluginConfig.General.ChangeOwnerIDOnCodeLockDeployed)
+                Unsubscribe("OnItemDeployed");
+
             // Register Commands
             if (string.IsNullOrEmpty(pluginConfig.Commands.ShareCommand))
                 DebugMessage("No valid ShareCommand in config.");
@@ -74,9 +78,10 @@ namespace Oxide.Plugins
                     cmd.AddChatCommand(pluginConfig.Commands.UnshareCommand, this, "cmdShareShort");
             }
         }
+        // Change OwnerID of entity when codelock is deployed
         void OnItemDeployed(Deployer deployer, BaseEntity entity)
         {
-            if(pluginConfig.General.ChangeOwnerIDOnCodeLockDeployed & entity & entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock)) // Hope we can subscribe later to hooks
+            if (entity & entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock))
             {
                 CodeLock cl = entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>();
                 if (cl)
@@ -112,6 +117,7 @@ namespace Oxide.Plugins
         // Don't ever try to override SaveConfig() & LoadConfig()! Horrible idea!
         private void SaveToConfigFile() => Config.WriteObject(pluginConfig, true);
         private void LoadFromConfigFile() => pluginConfig = Config.ReadObject<PluginConfig>();
+
         // Creates default configuration file
         protected override void LoadDefaultConfig()
         {
@@ -181,14 +187,14 @@ namespace Oxide.Plugins
             switch (args[0].ToLower())
             {
                 case "clan":
-                    // TODO Lookup clanmembers
+                    playerList = FindClanMember(player);
                     return;
                 case "friends":
-                    // TODO Lookup friends
+                    playerList = FindFriends(player);
                     return;
                 default:
                     BasePlayer foundPlayer = BasePlayer.Find(args[0]);
-                    if (foundPlayer != null)
+                    if (foundPlayer)
                     {
                         playerList = new List<BasePlayer>();
                         playerList.Add(foundPlayer);
@@ -200,7 +206,10 @@ namespace Oxide.Plugins
                         return;
                     }
             }
-            DebugMessage("Users on list: " + playerList.Count);
+            if (playerList != null)
+                DebugMessage("Users on list: " + playerList.Count);
+            else
+                DebugMessage("No Players Found");
 
             // Check on what to auth
             // TDOD: argument could be null?
@@ -273,9 +282,62 @@ namespace Oxide.Plugins
             return foundItems;
         }
 
-        bool IsBitSet(WantedEntityType value,  WantedEntityType pos)
+        bool IsBitSet(WantedEntityType value, WantedEntityType pos)
         {
             return (value & pos) != 0;
+        }
+
+        List<BasePlayer> FindFriends(BasePlayer player)
+        {
+            if (Friends == null)
+                return null;
+
+            List<BasePlayer> friends = new List<BasePlayer>();
+            foreach (ulong userID in (ulong[])Friends?.Call("GetFriends", player.userID))
+            {
+                BasePlayer foundPlayer = BasePlayer.FindByID(userID);
+                if (foundPlayer)
+                {
+                    friends.Add(foundPlayer);
+                }
+            }
+
+            return friends;
+        }
+
+        List<BasePlayer> FindClanMember(BasePlayer player)
+        {
+            if (Clans == null)
+                return null;
+
+            List<BasePlayer> clanMember = new List<BasePlayer>();
+            string clanName = (string)Clans?.Call("GetClanOf", player.userID);
+
+            if (string.IsNullOrEmpty(clanName))
+                return null;
+            else
+            {
+                JObject clan = (JObject)Clans?.Call("GetClan", clanName);
+                if (clan != null)
+                {
+                    JArray members = (JArray)clan.GetValue("members");
+                    if (members != null)
+                    {
+                        foreach (string member in members)
+                        {
+                            if (member == player.UserIDString)
+                                continue;
+                            BasePlayer foundPlayer = BasePlayer.Find(member);
+                            if (foundPlayer)
+                            {
+                                clanMember.Add(foundPlayer);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return clanMember;
         }
 
         //if(player.net.connection.authLevel < 2)
