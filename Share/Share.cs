@@ -343,14 +343,17 @@ namespace Oxide.Plugins
 
         BasePlayer FindPlayer(string playerName)
         {
-            BasePlayer foundPlayer = null;
+            DebugMessage("X");
+            BasePlayer foundPlayer = BasePlayer.Find(playerName);
             if (foundPlayer)
                 return foundPlayer;
 
+            DebugMessage("Y");
             foundPlayer = BasePlayer.FindSleeping(playerName);
             if (foundPlayer)
                 return foundPlayer;
 
+            DebugMessage("Z");
             IPlayer covplayer = covalence.Players.FindPlayer(playerName);
             if (covplayer != null)
                 foundPlayer = (BasePlayer)covplayer.Object;
