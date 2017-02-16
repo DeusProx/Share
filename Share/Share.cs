@@ -138,8 +138,8 @@ namespace Oxide.Plugins
         }
         #endregion
 
-        #region Strange
-        /*class ARPlayer
+        /*#region Strange
+        class ARPlayer
         {
             public string name;
             public ulong id;
@@ -158,8 +158,8 @@ namespace Oxide.Plugins
                 id = bp.userID;
                 basePlayer = bp;
             }
-        }*/
-        #endregion
+        }
+        #endregion*/
 
         #region Commands
         // if someone writes /share in the chat give him the help text
@@ -172,7 +172,7 @@ namespace Oxide.Plugins
 
         void cmdShareShort(BasePlayer player, string command, string[] args)
         {
-
+            DebugMessage("Called me!");
             // Check for right commands+arguments
             // TODO .....
 
@@ -476,8 +476,8 @@ namespace Oxide.Plugins
             sb.AppendLine("<size=1> </size>");
 
             sb.AppendLine("<color=#FFD479><who></color><size=12> can be <color=orange>clan</color>, <color=orange>friends</color> or a player name</size>");
-            sb.AppendLine("<color=#FFD479><What></color><size=12> can be <color=orange>at</color>(AutoTurrets), <color=orange>cl</color>(Codelocks), <color=orange>cb</color>(Cupboards) or <color=orange>all</color></size>");
-            sb.AppendLine("<size=12>Example: <color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " \"Ser Winter\" all</color></ size > ");
+            sb.AppendLine("<color=#FFD479><what></color><size=12> can be <color=orange>at</color>(AutoTurrets), <color=orange>cl</color>(Codelocks), <color=orange>cb</color>(Cupboards) or <color=orange>all</color></size>");
+            sb.AppendLine("<size=12>Example: <color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " \"Ser Winter\" all</color></size>");
 
             SendReply(player, sb.ToString());
         }
