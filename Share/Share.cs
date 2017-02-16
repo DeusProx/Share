@@ -78,14 +78,9 @@ namespace Oxide.Plugins
         {
             if(pluginConfig.General.ChangeOwnerIDOnCodeLockDeployed & entity & entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock)) // Hope we can subscribe later to hooks
             {
-                DebugMessage("old:" + entity.OwnerID);
                 CodeLock cl = entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>();
                 if (cl)
-                {
                     entity.OwnerID = deployer.GetOwnerPlayer().userID;
-                    DebugMessage("new:" + entity.OwnerID);
-                }
-
             }
         }
         #endregion
@@ -259,15 +254,13 @@ namespace Oxide.Plugins
                         {
                             b++;
                         }
-                    }
-
-                    if (IsBitSet(entityMask, WantedEntityType.AT) && entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock))
-                    {
-                        DebugMessage(""+entity.OwnerID);
-                        CodeLock cl = entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>();
-                        if(cl )//&& cl.OwnerID == player.userID)
+                        if (IsBitSet(entityMask, WantedEntityType.CL) && entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock))
                         {
-                            c++;
+                            CodeLock cl = entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>();
+                            if (cl)
+                            {
+                                c++;
+                            }
                         }
                     }
                 }
