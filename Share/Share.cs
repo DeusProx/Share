@@ -76,27 +76,17 @@ namespace Oxide.Plugins
         }
         void OnItemDeployed(Deployer deployer, BaseEntity entity)
         {
-            DebugMessage("Item deployed!");
-            if(entity & entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock))
+            if(pluginConfig.General.ChangeOwnerIDOnCodeLockDeployed & entity & entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock)) // Hope we can subscribe later to hooks
             {
                 DebugMessage("old:" + entity.OwnerID);
                 CodeLock cl = entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>();
                 if (cl)
                 {
-                    entity.OwnerID = deployer.OwnerID;
+                    entity.OwnerID = deployer.GetOwnerPlayer().userID;
                     DebugMessage("new:" + entity.OwnerID);
                 }
-                else
-                    DebugMessage("Something went wrong");
 
             }
-            Door door = (Door)entity;
-
-            FieldInfo info = typeof(BaseEntity).GetField("entitySlots", BindingFlags.Instance | BindingFlags.NonPublic);
-
-            EntityRef[] entitySlots = (EntityRef[])info.GetValue(door);
-
-            CodeLock codeLock = (CodeLock)entitySlots[0].Get(true);
         }
         #endregion
 
@@ -112,6 +102,7 @@ namespace Oxide.Plugins
             public string ChatPrefix { get; set; }
             public bool UsePermission { get; set; }
             public string PermissionName { get; set; }
+            public bool ChangeOwnerIDOnCodeLockDeployed { get; set; }
         }
         class Commands
         {
@@ -135,7 +126,8 @@ namespace Oxide.Plugins
                 {
                     ChatPrefix = "<color=cyan>[Share]</color>",
                     UsePermission = false,
-                    PermissionName = "share"
+                    PermissionName = "share",
+                    ChangeOwnerIDOnCodeLockDeployed = true
                 },
                 Commands = new Commands
                 {
@@ -185,11 +177,6 @@ namespace Oxide.Plugins
 
         void cmdShareShort(BasePlayer player, string command, string[] args)
         {
-
-            /*int bitmap = 0;
-            bool bCodelock = false;
-            bool bCupboard = false;
-            bool bAutoturret = false;*/
 
             // Check for right commands+arguments
             // TODO .....
