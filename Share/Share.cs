@@ -361,7 +361,7 @@ namespace Oxide.Plugins
         {
             BasePlayer foundPlayer = null;
 
-            IPlayer covplayer = covalence.Players.FindPlayer(playerID.ToString());
+            IPlayer covplayer = covalence.Players.FindPlayerById(playerID.ToString());
             if (covplayer != null)
                 foundPlayer = (BasePlayer)covplayer.Object;
 
