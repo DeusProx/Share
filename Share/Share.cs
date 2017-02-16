@@ -7,16 +7,16 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 
-enum WantedEntityType : uint
-{
-    CB = 0x0001,
-    CL = 0x0002,
-    AT = 0x0004,
-    ALL = AT + CB + CL
-}
-
 namespace Oxide.Plugins
 {
+    enum WantedEntityType : uint
+    {
+        CB = 0x0001,
+        CL = 0x0002,
+        AT = 0x0004,
+        ALL = AT + CB + CL
+    }
+
     [Info("Share", "DeusProx", "0.1.0", ResourceId = 0000)]
     [Description("Share cupboards, codelocks and autoturrets")]
     public class Share : RustPlugin
