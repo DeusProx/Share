@@ -25,10 +25,10 @@ namespace Oxide.Plugins
 
         enum WantedEntityType : uint
         {
-            CB = 0x0001,
+            AT = 0x0001,
             CL = 0x0002,
-            AT = 0x0004,
-            ALL = AT + CB + CL
+            CB = 0x0004,
+            ALL = AT + CL + CB
         }
 
         private PluginConfig pluginConfig;
@@ -177,15 +177,15 @@ namespace Oxide.Plugins
             // TODO .....
 
             // Decide with who to share
-            /*List<BasePlayer> playerList;
+            List<BasePlayer> playerList;
             switch (args[0].ToLower())
             {
                 case "clan":
                     // TODO Lookup clanmembers
-                    break;
+                    return;
                 case "friends":
                     // TODO Lookup friends
-                    break;
+                    return;
                 default:
                     BasePlayer foundPlayer = BasePlayer.Find(args[0]);
                     if (foundPlayer != null)
@@ -196,21 +196,22 @@ namespace Oxide.Plugins
                     }
                     else
                         return;
-            }*/
+            }
+            DebugMessage("Users on list: " + playerList.Count);
 
             // Check on what to auth
             // TDOD: argument could be null?
-            List<BaseEntity> items;
+            List<BaseEntity>[] items;
             switch (args[1].ToLower())
             {
-                case "cb":
-                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.CB);
+                case "at":
+                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.AT);
                     break;
                 case "cl":
                     items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.CL);
                     break;
-                case "at":
-                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.AT);
+                case "cb":
+                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.CB);
                     break;
                 case "all":
                     items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.ALL);
@@ -218,6 +219,10 @@ namespace Oxide.Plugins
                 default:
                     return;
             }
+
+            DebugMessage("AT: " + items[0].Count);
+            DebugMessage("CL: " + items[1].Count);
+            DebugMessage("CB: " + items[2].Count);
 
             // Check whether to add or to remove
             if (string.Equals(command, pluginConfig.Commands.ShareCommand))
@@ -231,10 +236,10 @@ namespace Oxide.Plugins
         }
 
         // Finds all entities a player owns on a certain radius & returns them
-        private List<BaseEntity> FindItems(BasePlayer player, float radius, WantedEntityType entityMask)
+        private List<BaseEntity>[] FindItems(BasePlayer player, float radius, WantedEntityType entityMask)
         {
             Dictionary<int, int> checkedInstanceIDs = new Dictionary<int, int>();
-            List<BaseEntity> foundItems = new List<BaseEntity>();
+            List<BaseEntity>[] foundItems = new List<BaseEntity>[3];
 
             int a = 0, b = 0, c = 0;
             foreach (var collider in Physics.OverlapSphere(player.transform.position, radius))
@@ -243,33 +248,24 @@ namespace Oxide.Plugins
                 if (entity && !checkedInstanceIDs.ContainsKey(entity.GetInstanceID()))
                 {
                     checkedInstanceIDs.Add(entity.GetInstanceID(), 1);
-
                     if (entity.OwnerID == player.userID)
                     {
                         if (IsBitSet(entityMask, WantedEntityType.AT) && entity is AutoTurret)
                         {
-                            a++;
+                            foundItems[0].Add(entity);
+                        }
+                        if (IsBitSet(entityMask, WantedEntityType.CL) && entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>())
+                        {
+                            foundItems[1].Add(entity);
                         }
                         if (IsBitSet(entityMask, WantedEntityType.CB) && entity is BuildingPrivlidge)
                         {
-                            b++;
-                        }
-                        if (IsBitSet(entityMask, WantedEntityType.CL) && entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock))
-                        {
-                            CodeLock cl = entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>();
-                            if (cl)
-                            {
-                                c++;
-                            }
+                            foundItems[2].Add(entity);
                         }
                     }
                 }
 
             }
-            DebugMessage("AutoTurret: " + a);
-            DebugMessage("Cupboard: " + b);
-            DebugMessage("Found CodeLock: " + c);
-
             return foundItems;
         }
 
@@ -469,14 +465,14 @@ namespace Oxide.Plugins
         {
             var sb = new StringBuilder();
             sb.AppendLine("<size=16>Share</size> by DeusProx");
-            sb.AppendLine("<size=12>Authorise players at your items in a " + pluginConfig.Commands.Radius + "m radius around you.</size>");
-            sb.AppendLine("<color=#FFD479>/ar show [cl|cb|at|all]</color><size=12>\nShow the authorisation status.</size>");
-            sb.AppendLine("<color=#FFD479>/ar add <player> [cl|cb|at|all]</color><size=12>\nAdd a player to the authorisation lists</size>");
-            sb.AppendLine("<color=#FFD479>/ar remove <player> [cl|cb|at|all]</color><size=12>\nRemove a player from the authorisation lists</size>");
-            sb.AppendLine("<color=#FFD479>/ar addfriends [cl|cb|at|all]</color><size=12>\nAdds all friends to the authorisation lists</size>");
-            sb.AppendLine("<color=#FFD479>/ar removefriends [cl|cb|at|all]</color><size=12>\nRemove all friends from the authorisation lists</size>");
-            sb.AppendLine("<color=#FFD479>/ar addclan [cl|cb|at|all]</color><size=12>\nAdd your clan to the authorisation lists</size>");
-            sb.AppendLine("<color=#FFD479>/ar removeclan [cl|cb|at|all]</color><size=12>\nRemove your clan from the authorisation lists</size>");
+            sb.AppendLine("<size=12>Shares Autoturrets, Codelocks & Cupboards with other players in a " + pluginConfig.Commands.Radius + "m radius around you.</size>");
+            sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " <who> <what></color>");
+            sb.AppendLine("<size=12>Shares the item specified by <what> with every player specified by <who>!</size>");
+            sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.UnshareCommand + " <who> <what></color>");
+            sb.AppendLine("<size=12>Unshares the item specified by <what> with every player specified by <who>!</size>");
+            sb.AppendLine("<size=12><color=#FFD479><Who></color> can be <color=orange>clan</color>,<color=orange>friends</color> or name of a player</size>");
+            sb.AppendLine("<size=12><color=#FFD479><What></color> can be <color=orange>at</color>(AutoTurrets),<color=orange>cl</color>(Codelocks),<color=orange>cb</color>(Cupboards) or <color=orange>all</color>(All three options)</size>");
+            sb.AppendLine("<size=12>Example: <color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " \"Ser Winter\" all</color></size>");
             //sb.AppendLine("Example: <color=#FFD479>/ar addfriends codelock</color><size=12>\nShare all your codelocks with your friends</size>");
 
             SendReply(player, sb.ToString());
