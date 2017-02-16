@@ -188,12 +188,12 @@ namespace Oxide.Plugins
             {
                 case "clan":
                     playerList = FindClanMember(player);
-                    return;
+                    break;
                 case "friends":
                     playerList = FindFriends(player);
-                    return;
+                    break;
                 default:
-                    BasePlayer foundPlayer = BasePlayer.Find(args[0]);
+                    BasePlayer foundPlayer = FindPlayer(args[0]);
                     if (foundPlayer)
                     {
                         playerList = new List<BasePlayer>();
@@ -211,6 +211,7 @@ namespace Oxide.Plugins
             else
                 DebugMessage("No Players Found");
 
+            DebugMessage("Before Items");
             // Check on what to auth
             // TDOD: argument could be null?
             List<BaseEntity>[] items;
@@ -295,7 +296,7 @@ namespace Oxide.Plugins
             List<BasePlayer> friends = new List<BasePlayer>();
             foreach (ulong userID in (ulong[])Friends?.Call("GetFriends", player.userID))
             {
-                BasePlayer foundPlayer = BasePlayer.FindByID(userID);
+                BasePlayer foundPlayer = FindPlayer(userID);
                 if (foundPlayer)
                 {
                     friends.Add(foundPlayer);
@@ -327,7 +328,7 @@ namespace Oxide.Plugins
                         {
                             if (member == player.UserIDString)
                                 continue;
-                            BasePlayer foundPlayer = BasePlayer.Find(member);
+                            BasePlayer foundPlayer = FindPlayer(member);
                             if (foundPlayer)
                             {
                                 clanMember.Add(foundPlayer);
@@ -338,6 +339,33 @@ namespace Oxide.Plugins
             }
 
             return clanMember;
+        }
+        BasePlayer FindPlayer(string playerName)
+        {
+            BasePlayer foundPlayer = null;
+            /*if (foundPlayer)
+                return foundPlayer;
+
+            foundPlayer = BasePlayer.FindSleeping(playerName);
+            if (foundPlayer)
+                return foundPlayer;*/
+
+            IPlayer covplayer = covalence.Players.FindPlayer(playerName);
+            if (covplayer != null)
+                foundPlayer = (BasePlayer)covplayer.Object;
+
+            return foundPlayer;
+        }
+
+        BasePlayer FindPlayer(ulong playerID)
+        {
+            BasePlayer foundPlayer = null;
+
+            IPlayer covplayer = covalence.Players.FindPlayer(playerID.ToString());
+            if (covplayer != null)
+                foundPlayer = (BasePlayer)covplayer.Object;
+
+            return foundPlayer;
         }
 
         //if(player.net.connection.authLevel < 2)
