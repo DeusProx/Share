@@ -139,7 +139,7 @@ namespace Oxide.Plugins
         #endregion
 
         #region Strange
-        class ARPlayer
+        /*class ARPlayer
         {
             public string name;
             public ulong id;
@@ -158,7 +158,7 @@ namespace Oxide.Plugins
                 id = bp.userID;
                 basePlayer = bp;
             }
-        }
+        }*/
         #endregion
 
         #region Commands
@@ -220,6 +220,7 @@ namespace Oxide.Plugins
                     return;
             }
 
+            DebugMessage("items found:");
             DebugMessage("AT: " + items[0].Count);
             DebugMessage("CL: " + items[1].Count);
             DebugMessage("CB: " + items[2].Count);
@@ -465,15 +466,18 @@ namespace Oxide.Plugins
         {
             var sb = new StringBuilder();
             sb.AppendLine("<size=16>Share</size> by DeusProx");
-            sb.AppendLine("<size=12>Shares Autoturrets, Codelocks & Cupboards with other players in a " + pluginConfig.Commands.Radius + "m radius around you.</size>");
+            sb.AppendLine("<size=12>Shares items with other players in a " + pluginConfig.Commands.Radius + "m radius around you.</size>");
+            sb.AppendLine("<size=1> </size>");
+
             sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " <who> <what></color>");
-            sb.AppendLine("<size=12>Shares the item specified by <what> with every player specified by <who>!</size>");
+            sb.AppendLine("<size=12>Shares the item <what> with every player <who></size>");
             sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.UnshareCommand + " <who> <what></color>");
-            sb.AppendLine("<size=12>Unshares the item specified by <what> with every player specified by <who>!</size>");
-            sb.AppendLine("<size=12><color=#FFD479><Who></color> can be <color=orange>clan</color>,<color=orange>friends</color> or name of a player</size>");
-            sb.AppendLine("<size=12><color=#FFD479><What></color> can be <color=orange>at</color>(AutoTurrets),<color=orange>cl</color>(Codelocks),<color=orange>cb</color>(Cupboards) or <color=orange>all</color>(All three options)</size>");
-            sb.AppendLine("<size=12>Example: <color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " \"Ser Winter\" all</color></size>");
-            //sb.AppendLine("Example: <color=#FFD479>/ar addfriends codelock</color><size=12>\nShare all your codelocks with your friends</size>");
+            sb.AppendLine("<size=12>Unshares the item <what> with every player <who></size>");
+            sb.AppendLine("<size=1> </size>");
+
+            sb.AppendLine("<color=#FFD479><who></color><size=12> can be <color=orange>clan</color>, <color=orange>friends</color> or a player name</size>");
+            sb.AppendLine("<color=#FFD479><What></color><size=12> can be <color=orange>at</color>(AutoTurrets), <color=orange>cl</color>(Codelocks), <color=orange>cb</color>(Cupboards) or <color=orange>all</color></size>");
+            sb.AppendLine("<size=12>Example: <color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " \"Ser Winter\" all</color></ size > ");
 
             SendReply(player, sb.ToString());
         }
