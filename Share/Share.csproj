@@ -47,17 +47,21 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>References\Oxide.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Oxide.Ext.CSharp, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Oxide.Core.CSharp, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>References\Oxide.Ext.CSharp.dll</HintPath>
+      <HintPath>References\Oxide.Core.CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="Oxide.Ext.Unity, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Oxide.Core.Unity, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>References\Oxide.Ext.Unity.dll</HintPath>
+      <HintPath>References\Oxide.Core.Unity.dll</HintPath>
     </Reference>
     <Reference Include="Oxide.Game.Rust, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>References\Oxide.Game.Rust.dll</HintPath>
+    </Reference>
+    <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>References\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -75,9 +79,10 @@
     <Content Include="References\Facepunch.Console.dll" />
     <Content Include="References\Newtonsoft.Json.dll" />
     <Content Include="References\Oxide.Core.dll" />
-    <Content Include="References\Oxide.Ext.CSharp.dll" />
+    <Content Include="References\Oxide.Core.CSharp.dll" />
     <Content Include="References\Oxide.Ext.Unity.dll" />
-    <Content Include="References\Oxide.Game.Rust.dll" />
+    <Content Include="References\Oxide.Core.Rust.dll" />
+    <Content Include="References\protobuf-net.dll" />
     <Content Include="References\UnityEngine.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -1,14 +1,19 @@
 ﻿#define DEBUG
+using Newtonsoft.Json.Linq;
+using Oxide.Core.Libraries.Covalence;
 using Oxide.Core.Plugins;
-using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using Oxide.Game.Rust.Libraries.Covalence;
-using Oxide.Core.Libraries.Covalence;
 using System.Text;
-using Newtonsoft.Json.Linq;
+using UnityEngine;
 
+enum WantedEntityType : uint
+{
+    CB = 0x0001,
+    CL = 0x0002,
+    AT = 0x0004,
+    ALL = AT + CB + CL
+}
 
 namespace Oxide.Plugins
 {
@@ -17,16 +22,17 @@ namespace Oxide.Plugins
     public class Share : RustPlugin
     {
         #region Fields  
-        [PluginReference] private Plugin PlayerDatabase;
-        [PluginReference] private Plugin Friends;
-        [PluginReference] private Plugin Clans;
+        [PluginReference]
+        private Plugin PlayerDatabase;
+        [PluginReference]
+        private Plugin Friends;
+        [PluginReference]
+        private Plugin Clans;
 
         private PluginConfig pluginConfig;
 
         private FieldInfo codelockwhitelist;
         #endregion
-
-        // Define a shortcut property to get the amount of seconds since the server started
 
         #region Hooks
         void Loaded()
@@ -48,7 +54,7 @@ namespace Oxide.Plugins
                 DebugMessage("Clans Plugin found");
 
             // Load the config file
-            LoadConfig2();
+            LoadFromConfigFile();
 
             // Register Commands
             if (string.IsNullOrEmpty(pluginConfig.Commands.ShareCommand))
@@ -91,10 +97,11 @@ namespace Oxide.Plugins
             public float Radius { get; set; }
         }
 
-        // Overwrite all three virtual methods for read/write configuration file
-        private void SaveConfig(PluginConfig config) => Config.WriteObject(config, true);
-        private void LoadConfig2() => pluginConfig = Config.ReadObject<PluginConfig>();
-        protected override void LoadDefaultConfig()  // Creates default configuration file
+        // Don't ever try to override SaveConfig() & LoadConfig()! Horrible idea!
+        private void SaveToConfigFile() => Config.WriteObject(pluginConfig, true);
+        private void LoadFromConfigFile() => pluginConfig = Config.ReadObject<PluginConfig>();
+        // Creates default configuration file
+        protected override void LoadDefaultConfig()
         {
             var defaultConfig = new PluginConfig
             {
@@ -114,11 +121,11 @@ namespace Oxide.Plugins
                     Radius = 100.0F
                 }
             };
-            SaveConfig(defaultConfig);
+            Config.WriteObject(defaultConfig, true); // write into config file
         }
         #endregion
 
-        /*#region Strange
+        #region Strange
         class ARPlayer
         {
             public string name;
@@ -139,16 +146,9 @@ namespace Oxide.Plugins
                 basePlayer = bp;
             }
         }
-        #endregion*/
-        
-        #region Commands
-        [ChatCommand("test")]
-        void test(BasePlayer player, string command, string[] args)
-        {
-            //if(this)
-            //DebugMessage(configData.CommonSettings.ChatPrefix);
-        }
+        #endregion
 
+        #region Commands
         // if someone writes /share in the chat give him the help text
         [ChatCommand("share")]
         void cmdShare(BasePlayer player, string command, string[] args)
@@ -160,212 +160,288 @@ namespace Oxide.Plugins
         void cmdShareShort(BasePlayer player, string command, string[] args)
         {
 
-            int bitmap = 0;
+            /*int bitmap = 0;
             bool bCodelock = false;
             bool bCupboard = false;
-            bool bAutoturret = false;
+            bool bAutoturret = false;*/
 
-#if DEBUG
-            DebugMessage(command);
-            foreach (string arg in args)
-            {
-                DebugMessage(arg);
-            }
+            // Check for right commands+arguments
+            // TODO .....
 
-            switch (command)
+            // Decide with who to share
+            /*List<BasePlayer> playerList;
+            switch (args[0].ToLower())
             {
-                case "sh+":
-                    bitmap += 1;
+                case "clan":
+                    // TODO Lookup clanmembers
                     break;
-                case "sh-":
+                case "friends":
+                    // TODO Lookup friends
+                    break;
+                default:
+                    BasePlayer foundPlayer = BasePlayer.Find(args[0]);
+                    if (foundPlayer != null)
+                    {
+                        playerList = new List<BasePlayer>();
+                        playerList.Add(foundPlayer);
+                        break;
+                    }
+                    else
+                        return;
+            }*/
+
+            // Check on what to auth
+            // TDOD: argument could be null?
+            List<BaseEntity> items;
+            switch (args[1].ToLower())
+            {
+                case "cb":
+                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.CB);
+                    break;
+                case "cl":
+                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.CL);
+                    break;
+                case "at":
+                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.AT);
+                    break;
+                case "all":
+                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.ALL);
                     break;
                 default:
                     return;
             }
-#endif
 
-            //if(player.net.connection.authLevel < 2)
-            //{
-            //  SendReply(player, "You don´t have the permission to use this command.");
-            //  return;
-            //}
-
-            if (args == null || args.Length < 2 || args.Length > 3)
+            // Check whether to add or to remove
+            if (string.Equals(command, pluginConfig.Commands.ShareCommand))
             {
-                ShowCommandHelp(player);
-                return;
+                //share
             }
-
-
-            if (args.Length == 2 || args.Length == 3)
+            else if (string.Equals(command, pluginConfig.Commands.UnshareCommand))
             {
-                bCodelock = args[args.Length - 1].ToLower() == "cl" || args[args.Length - 1].ToLower() == "all";
-                bCupboard = args[args.Length - 1].ToLower() == "cb" || args[args.Length - 1].ToLower() == "all";
-                bAutoturret = args[args.Length - 1].ToLower() == "at" || args[args.Length - 1].ToLower() == "all";
+                //unshare
             }
+        }
 
-            if (!(bCodelock || bCupboard || bAutoturret))
+        // Finds all entities a player owns on a certain radius & returns them
+        private List<BaseEntity> FindItems(BasePlayer player, float radius, WantedEntityType entityMask)
+        {
+            Collider[] hittedColliders = Physics.OverlapSphere(player.transform.position, radius);
+            List<BaseEntity> foundItems = new List<BaseEntity>();
+
+            foreach (var collider in hittedColliders)
             {
-                ShowCommandHelp(player);
-                return;
+                BaseEntity entity = collider.gameObject.ToBaseEntity();
+                if (entity && entity.OwnerID == player.userID)
+                {
+                    if (IsBitSet(entityMask, WantedEntityType.AT) && entity is AutoTurret)
+                    {
+                        DebugMessage("AutoTurret");
+                    }
+                    if (IsBitSet(entityMask, WantedEntityType.CB) && entity is BuildingPrivlidge)
+                    {
+                        DebugMessage("Cupboard");
+                    }
+                    if (IsBitSet(entityMask, WantedEntityType.CL) && entity is Door)
+                    {
+                        DebugMessage("Found Door");
+                    }
+                    if (IsBitSet(entityMask, WantedEntityType.CL) && entity is CodeLock)
+                    {
+                        DebugMessage("Found CodeLock");
+                    }
+                }
+
             }
-            else if (args.Length == 2)
+            return foundItems;
+        }
+
+        bool IsBitSet(WantedEntityType value,  WantedEntityType pos)
+        {
+            return (value & pos) != 0;
+        }
+
+        //if(player.net.connection.authLevel < 2)
+        //{
+        //  SendReply(player, "You don´t have the permission to use this command.");
+        //  return;
+        //}
+
+        /*if (args == null || args.Length < 2 || args.Length > 3)
+        {
+            ShowCommandHelp(player);
+            return;
+        }
+
+
+        if (args.Length == 2 || args.Length == 3)
+        {
+            bCodelock = args[args.Length - 1].ToLower() == "cl" || args[args.Length - 1].ToLower() == "all";
+            bCupboard = args[args.Length - 1].ToLower() == "cb" || args[args.Length - 1].ToLower() == "all";
+            bAutoturret = args[args.Length - 1].ToLower() == "at" || args[args.Length - 1].ToLower() == "all";
+        }*/
+
+        /*if (!(bCodelock || bCupboard || bAutoturret))
+        {
+            ShowCommandHelp(player);
+            return;
+        }
+        else if (args.Length == 2)
+        {
+            if (args[0].ToLower() == "show")
             {
-                if (args[0].ToLower() == "show")
-                {
-                    ShowItems(player, bCodelock, bCupboard, bAutoturret);
-                }
-                else if (args[0].ToLower() == "addfriends")
-                {
-                    var foundPlayerList = FindFriendPlayers(player.userID);
-
-                    if (foundPlayerList == null || foundPlayerList.Count == 0)
-                    {
-                        SendReply(player, "No friends found");
-                        return;
-                    }
-
-                    if (foundPlayerList != null)
-                    {
-                        var sb = new StringBuilder();
-                        sb.Append("Found friends:");
-
-                        foreach (var foundPlayer in foundPlayerList)
-                        {
-                            if (foundPlayer != null)
-                                sb.Append(" " + foundPlayer.name);
-                        }
-                        PrintToConsole(player, sb.ToString());
-
-                        int count = AddPlayersToWhitelists(player, foundPlayerList, bCodelock, bCupboard, bAutoturret);
-                        SendReply(player, "Added Friends. Created " + count.ToString() + " whitelist entries");
-
-                        ShowItems(player, bCodelock, bCupboard, bAutoturret);
-                    }
-                }
-                else if (args[0].ToLower() == "removefriends")
-                {
-                    var foundPlayerList = FindFriendPlayers(player.userID);
-
-                    if (foundPlayerList == null || foundPlayerList.Count == 0)
-                    {
-                        SendReply(player, "No friends found");
-                        return;
-                    }
-
-                    if (foundPlayerList != null)
-                    {
-                        var sb = new StringBuilder();
-                        sb.Append("Found friends:");
-
-                        foreach (var foundPlayer in foundPlayerList)
-                        {
-                            if (foundPlayer != null)
-                                sb.Append(" " + foundPlayer.name);
-                        }
-                        PrintToConsole(player, sb.ToString());
-
-                        int count = RemovePlayersFromWhitelists(player, foundPlayerList, bCodelock, bCupboard, bAutoturret);
-                        SendReply(player, "Removed Friends. Deleted " + count.ToString() + " whitelist entries");
-
-                        ShowItems(player, bCodelock, bCupboard, bAutoturret);
-                    }
-                }
-                else if (args[0].ToLower() == "addclan")
-                {
-                    var foundPlayerList = FindClanPlayers(player.userID);
-
-                    if (foundPlayerList == null || foundPlayerList.Count == 0)
-                    {
-                        SendReply(player, "No clan or clan members found");
-                        return;
-                    }
-
-                    if (foundPlayerList != null)
-                    {
-                        var sb = new StringBuilder();
-                        sb.Append("Found clan members:");
-
-                        foreach (var foundPlayer in foundPlayerList)
-                        {
-                            if (foundPlayer != null)
-                                sb.Append(" " + foundPlayer.name);
-                        }
-                        PrintToConsole(player, sb.ToString());
-
-                        int count = AddPlayersToWhitelists(player, foundPlayerList, bCodelock, bCupboard, bAutoturret);
-                        SendReply(player, "Added Clan. Created " + count.ToString() + " whitelist entries");
-
-                        ShowItems(player, bCodelock, bCupboard, bAutoturret);
-                    }
-                }
-                else if (args[0].ToLower() == "removeclan")
-                {
-                    var foundPlayerList = FindClanPlayers(player.userID);
-
-                    if (foundPlayerList == null || foundPlayerList.Count == 0)
-                    {
-                        SendReply(player, "No clan or clan members found");
-                        return;
-                    }
-
-                    if (foundPlayerList != null)
-                    {
-                        var sb = new StringBuilder();
-                        sb.Append("Found clan members:");
-
-                        foreach (var foundPlayer in foundPlayerList)
-                        {
-                            if (foundPlayer != null)
-                                sb.Append(" " + foundPlayer.name);
-                        }
-                        PrintToConsole(player, sb.ToString());
-
-                        int count = RemovePlayersFromWhitelists(player, foundPlayerList, bCodelock, bCupboard, bAutoturret);
-                        SendReply(player, "Removed Clan. Deleted " + count.ToString() + " whitelist entries");
-
-                        ShowItems(player, bCodelock, bCupboard, bAutoturret);
-                    }
-                }
-                else
-                    ShowCommandHelp(player);
+                ShowItems(player, bCodelock, bCupboard, bAutoturret);
             }
-            else if (args.Length == 3)
+            else if (args[0].ToLower() == "addfriends")
             {
-                if (args[0].ToLower() == "add")
+                var foundPlayerList = FindFriendPlayers(player.userID);
+
+                if (foundPlayerList == null || foundPlayerList.Count == 0)
                 {
-                    ARPlayer foundPlayer = FindPlayer(args[1]);
-                    var foundPlayerList = new List<ARPlayer>();
-                    if (foundPlayer != null)
+                    SendReply(player, "No friends found");
+                    return;
+                }
+
+                if (foundPlayerList != null)
+                {
+                    var sb = new StringBuilder();
+                    sb.Append("Found friends:");
+
+                    foreach (var foundPlayer in foundPlayerList)
                     {
-                        foundPlayerList.Add(foundPlayer);
+                        if (foundPlayer != null)
+                            sb.Append(" " + foundPlayer.name);
                     }
+                    PrintToConsole(player, sb.ToString());
+
                     int count = AddPlayersToWhitelists(player, foundPlayerList, bCodelock, bCupboard, bAutoturret);
-                    SendReply(player, "Added player: " + foundPlayer.name + ". Created " + count.ToString() + " whitelist entries");
+                    SendReply(player, "Added Friends. Created " + count.ToString() + " whitelist entries");
+
                     ShowItems(player, bCodelock, bCupboard, bAutoturret);
                 }
-                else if (args[0].ToLower() == "remove")
+            }
+            else if (args[0].ToLower() == "removefriends")
+            {
+                var foundPlayerList = FindFriendPlayers(player.userID);
+
+                if (foundPlayerList == null || foundPlayerList.Count == 0)
                 {
-                    ARPlayer foundPlayer = FindPlayer(args[1]);
-                    var foundPlayerList = new List<ARPlayer>();
-                    if (foundPlayer != null)
+                    SendReply(player, "No friends found");
+                    return;
+                }
+
+                if (foundPlayerList != null)
+                {
+                    var sb = new StringBuilder();
+                    sb.Append("Found friends:");
+
+                    foreach (var foundPlayer in foundPlayerList)
                     {
-                        foundPlayerList.Add(foundPlayer);
+                        if (foundPlayer != null)
+                            sb.Append(" " + foundPlayer.name);
                     }
+                    PrintToConsole(player, sb.ToString());
 
                     int count = RemovePlayersFromWhitelists(player, foundPlayerList, bCodelock, bCupboard, bAutoturret);
-                    SendReply(player, "Removed player: " + foundPlayer.name + ". Deleted " + count.ToString() + " whitelist entries");
+                    SendReply(player, "Removed Friends. Deleted " + count.ToString() + " whitelist entries");
+
                     ShowItems(player, bCodelock, bCupboard, bAutoturret);
                 }
-                else
-                    ShowCommandHelp(player);
+            }
+            else if (args[0].ToLower() == "addclan")
+            {
+                var foundPlayerList = FindClanPlayers(player.userID);
+
+                if (foundPlayerList == null || foundPlayerList.Count == 0)
+                {
+                    SendReply(player, "No clan or clan members found");
+                    return;
+                }
+
+                if (foundPlayerList != null)
+                {
+                    var sb = new StringBuilder();
+                    sb.Append("Found clan members:");
+
+                    foreach (var foundPlayer in foundPlayerList)
+                    {
+                        if (foundPlayer != null)
+                            sb.Append(" " + foundPlayer.name);
+                    }
+                    PrintToConsole(player, sb.ToString());
+
+                    int count = AddPlayersToWhitelists(player, foundPlayerList, bCodelock, bCupboard, bAutoturret);
+                    SendReply(player, "Added Clan. Created " + count.ToString() + " whitelist entries");
+
+                    ShowItems(player, bCodelock, bCupboard, bAutoturret);
+                }
+            }
+            else if (args[0].ToLower() == "removeclan")
+            {
+                var foundPlayerList = FindClanPlayers(player.userID);
+
+                if (foundPlayerList == null || foundPlayerList.Count == 0)
+                {
+                    SendReply(player, "No clan or clan members found");
+                    return;
+                }
+
+                if (foundPlayerList != null)
+                {
+                    var sb = new StringBuilder();
+                    sb.Append("Found clan members:");
+
+                    foreach (var foundPlayer in foundPlayerList)
+                    {
+                        if (foundPlayer != null)
+                            sb.Append(" " + foundPlayer.name);
+                    }
+                    PrintToConsole(player, sb.ToString());
+
+                    int count = RemovePlayersFromWhitelists(player, foundPlayerList, bCodelock, bCupboard, bAutoturret);
+                    SendReply(player, "Removed Clan. Deleted " + count.ToString() + " whitelist entries");
+
+                    ShowItems(player, bCodelock, bCupboard, bAutoturret);
+                }
             }
             else
-            {
                 ShowCommandHelp(player);
-            }
-
         }
+        else if (args.Length == 3)
+        {
+            if (args[0].ToLower() == "add")
+            {
+                ARPlayer foundPlayer = FindPlayer(args[1]);
+                var foundPlayerList = new List<ARPlayer>();
+                if (foundPlayer != null)
+                {
+                    foundPlayerList.Add(foundPlayer);
+                }
+                int count = AddPlayersToWhitelists(player, foundPlayerList, bCodelock, bCupboard, bAutoturret);
+                SendReply(player, "Added player: " + foundPlayer.name + ". Created " + count.ToString() + " whitelist entries");
+                ShowItems(player, bCodelock, bCupboard, bAutoturret);
+            }
+            else if (args[0].ToLower() == "remove")
+            {
+                ARPlayer foundPlayer = FindPlayer(args[1]);
+                var foundPlayerList = new List<ARPlayer>();
+                if (foundPlayer != null)
+                {
+                    foundPlayerList.Add(foundPlayer);
+                }
+
+                int count = RemovePlayersFromWhitelists(player, foundPlayerList, bCodelock, bCupboard, bAutoturret);
+                SendReply(player, "Removed player: " + foundPlayer.name + ". Deleted " + count.ToString() + " whitelist entries");
+                ShowItems(player, bCodelock, bCupboard, bAutoturret);
+            }
+            else
+                ShowCommandHelp(player);
+        }
+        else
+        {
+            ShowCommandHelp(player);
+        }
+
+    }*/
 
         //////////////////////////////////////////////////////////////////////////////////////////
         ///// 
@@ -389,7 +465,7 @@ namespace Oxide.Plugins
         }
         #endregion
 
-        #region Functions
+        /*#region Functions
         void ShowItems(BasePlayer player, bool bCodelock, bool bCupboard, bool bAutoturret)
         {
             var cupboards = new Dictionary<int, BuildingPrivlidge>();
@@ -728,7 +804,6 @@ namespace Oxide.Plugins
                 if (whitelistplayer.userid == addPlayer.id)
                     return false;
             }
-
             turret.authorizedPlayers.Add(protoPlayer);
             turret.SendNetworkUpdate();
             turret.SetTarget(null);
@@ -754,7 +829,6 @@ namespace Oxide.Plugins
                     removed = true;
                 }
             }
-
             return removed;
         }
 
@@ -886,7 +960,7 @@ namespace Oxide.Plugins
 
             return foundPlayer;
         }
-        #endregion
+        #endregion*/
 
         #region Messages
         public void DebugMessage(string msg) { Debug.Log("[Share] " + msg); }
