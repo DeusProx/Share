@@ -195,7 +195,10 @@ namespace Oxide.Plugins
                         break;
                     }
                     else
+                    {
+                        SendReply(player, "Player with name \"" + args[0] + "\" not found!");
                         return;
+                    }
             }
             DebugMessage("Users on list: " + playerList.Count);
 
