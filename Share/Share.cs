@@ -74,6 +74,30 @@ namespace Oxide.Plugins
                     cmd.AddChatCommand(pluginConfig.Commands.UnshareCommand, this, "cmdShareShort");
             }
         }
+        void OnItemDeployed(Deployer deployer, BaseEntity entity)
+        {
+            DebugMessage("Item deployed!");
+            if(entity & entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock))
+            {
+                DebugMessage("old:" + entity.OwnerID);
+                CodeLock cl = entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>();
+                if (cl)
+                {
+                    entity.OwnerID = deployer.OwnerID;
+                    DebugMessage("new:" + entity.OwnerID);
+                }
+                else
+                    DebugMessage("Something went wrong");
+
+            }
+            Door door = (Door)entity;
+
+            FieldInfo info = typeof(BaseEntity).GetField("entitySlots", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            EntityRef[] entitySlots = (EntityRef[])info.GetValue(door);
+
+            CodeLock codeLock = (CodeLock)entitySlots[0].Get(true);
+        }
         #endregion
 
         #region Configuration
@@ -250,10 +274,11 @@ namespace Oxide.Plugins
                         }
                     }
 
-                    if (entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock))
+                    if (IsBitSet(entityMask, WantedEntityType.AT) && entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock))
                     {
+                        DebugMessage(""+entity.OwnerID);
                         CodeLock cl = entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>();
-                        if(cl && cl.OwnerID == player.userID)
+                        if(cl )//&& cl.OwnerID == player.userID)
                         {
                             c++;
                         }
