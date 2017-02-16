@@ -340,15 +340,16 @@ namespace Oxide.Plugins
 
             return clanMember;
         }
+
         BasePlayer FindPlayer(string playerName)
         {
             BasePlayer foundPlayer = null;
-            /*if (foundPlayer)
+            if (foundPlayer)
                 return foundPlayer;
 
             foundPlayer = BasePlayer.FindSleeping(playerName);
             if (foundPlayer)
-                return foundPlayer;*/
+                return foundPlayer;
 
             IPlayer covplayer = covalence.Players.FindPlayer(playerName);
             if (covplayer != null)
@@ -356,7 +357,6 @@ namespace Oxide.Plugins
 
             return foundPlayer;
         }
-
         BasePlayer FindPlayer(ulong playerID)
         {
             BasePlayer foundPlayer = null;
@@ -992,7 +992,7 @@ namespace Oxide.Plugins
                         {
                             if (member == playerID.ToString())
                                 continue;
-                            ARPlayer foundPlayer = FindPlayer(member);
+                            ARPlayer foundPlayer = FindPlayer:q(member);
                             if (foundPlayer != null)
                             {
                                 foundPlayerList.Add(foundPlayer);
