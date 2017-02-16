@@ -228,6 +228,7 @@ namespace Oxide.Plugins
             Collider[] hittedColliders = Physics.OverlapSphere(player.transform.position, radius);
             List<BaseEntity> foundItems = new List<BaseEntity>();
 
+            int a = 0, b = 0, c = 0, d = 0;
             foreach (var collider in hittedColliders)
             {
                 BaseEntity entity = collider.gameObject.ToBaseEntity();
@@ -235,23 +236,28 @@ namespace Oxide.Plugins
                 {
                     if (IsBitSet(entityMask, WantedEntityType.AT) && entity is AutoTurret)
                     {
-                        DebugMessage("AutoTurret");
+                        a++;
                     }
                     if (IsBitSet(entityMask, WantedEntityType.CB) && entity is BuildingPrivlidge)
                     {
-                        DebugMessage("Cupboard");
+                        b++;
                     }
                     if (IsBitSet(entityMask, WantedEntityType.CL) && entity is Door)
                     {
-                        DebugMessage("Found Door");
+                        c++;
                     }
                     if (IsBitSet(entityMask, WantedEntityType.CL) && entity is CodeLock)
                     {
-                        DebugMessage("Found CodeLock");
+                        d++;
                     }
                 }
 
             }
+            DebugMessage("AutoTurret: " + a);
+            DebugMessage("Cupboard: " + b);
+            DebugMessage("Found Door: " + c);
+            DebugMessage("Found CodeLock: " + d);
+
             return foundItems;
         }
 
