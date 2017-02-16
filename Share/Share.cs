@@ -254,8 +254,10 @@ namespace Oxide.Plugins
         {
             Dictionary<int, int> checkedInstanceIDs = new Dictionary<int, int>();
             List<BaseEntity>[] foundItems = new List<BaseEntity>[3];
+            foundItems[0] = new List<BaseEntity>();
+            foundItems[1] = new List<BaseEntity>();
+            foundItems[2] = new List<BaseEntity>();
 
-            int a = 0, b = 0, c = 0;
             foreach (var collider in Physics.OverlapSphere(player.transform.position, radius))
             {
                 BaseEntity entity = collider.gameObject.ToBaseEntity();
@@ -351,7 +353,6 @@ namespace Oxide.Plugins
             if (foundPlayer)
                 return foundPlayer;
 
-            DebugMessage("Z");
             IPlayer covplayer = covalence.Players.FindPlayer(playerName);
             if (covplayer != null)
                 foundPlayer = (BasePlayer)covplayer.Object;
