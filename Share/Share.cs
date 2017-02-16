@@ -230,38 +230,40 @@ namespace Oxide.Plugins
             Dictionary<int, int> checkedInstanceIDs = new Dictionary<int, int>();
             List<BaseEntity> foundItems = new List<BaseEntity>();
 
-            int a = 0, b = 0, c = 0, d = 0;
+            int a = 0, b = 0, c = 0;
             foreach (var collider in Physics.OverlapSphere(player.transform.position, radius))
             {
                 BaseEntity entity = collider.gameObject.ToBaseEntity();
-                if (entity && entity.OwnerID == player.userID && !checkedInstanceIDs.ContainsKey(entity.GetInstanceID()))
+                if (entity && !checkedInstanceIDs.ContainsKey(entity.GetInstanceID()))
                 {
                     checkedInstanceIDs.Add(entity.GetInstanceID(), 1);
 
-                    if (IsBitSet(entityMask, WantedEntityType.AT) && entity is AutoTurret)
+                    if (entity.OwnerID == player.userID)
                     {
-                        a++;
+                        if (IsBitSet(entityMask, WantedEntityType.AT) && entity is AutoTurret)
+                        {
+                            a++;
+                        }
+                        if (IsBitSet(entityMask, WantedEntityType.CB) && entity is BuildingPrivlidge)
+                        {
+                            b++;
+                        }
                     }
-                    if (IsBitSet(entityMask, WantedEntityType.CB) && entity is BuildingPrivlidge)
+
+                    if (entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock))
                     {
-                        b++;
-                        DebugMessage(""+entity.GetInstanceID());
-                    }
-                    if (IsBitSet(entityMask, WantedEntityType.CL) && entity is Door)
-                    {
-                        c++;
-                    }
-                    if (IsBitSet(entityMask, WantedEntityType.CL) && entity is CodeLock)
-                    {
-                        d++;
+                        CodeLock cl = entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>();
+                        if(cl && cl.OwnerID == player.userID)
+                        {
+                            c++;
+                        }
                     }
                 }
 
             }
             DebugMessage("AutoTurret: " + a);
             DebugMessage("Cupboard: " + b);
-            DebugMessage("Found Door: " + c);
-            DebugMessage("Found CodeLock: " + d);
+            DebugMessage("Found CodeLock: " + c);
 
             return foundItems;
         }
