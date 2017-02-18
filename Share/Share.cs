@@ -102,6 +102,7 @@ namespace Oxide.Plugins
             public string ChatPrefix { get; set; }
             public bool UsePermission { get; set; }
             public string PermissionName { get; set; }
+            public bool PreventPlayersFromUnsharingThemself { get; set; }
             public bool ChangeOwnerIDOnCodeLockDeployed { get; set; }
         }
         class Commands
@@ -128,6 +129,7 @@ namespace Oxide.Plugins
                     ChatPrefix = "<color=cyan>[Share]</color>",
                     UsePermission = false,
                     PermissionName = "share",
+                    PreventPlayersFromUnsharingThemself = true,
                     ChangeOwnerIDOnCodeLockDeployed = true
                 },
                 Commands = new Commands
@@ -188,9 +190,20 @@ namespace Oxide.Plugins
             {
                 case "clan":
                     playerList = FindClanMember(player);
+                    playerList = FindFriends(player);
+                    if (playerList == null || playerList.Count == 0)
+                    {
+                        SendReply(player, "You don't belong to any clan!");
+                        return;
+                    }
                     break;
                 case "friends":
                     playerList = FindFriends(player);
+                    if (playerList == null || playerList.Count == 0)
+                    {
+                        SendReply(player, "You have no friends added yet!");
+                        return;
+                    }
                     break;
                 default:
                     BasePlayer foundPlayer = FindPlayer(args[0]);
@@ -206,12 +219,7 @@ namespace Oxide.Plugins
                         return;
                     }
             }
-            if (playerList != null)
-                DebugMessage("Users on list: " + playerList.Count);
-            else
-                DebugMessage("No Players Found");
 
-            DebugMessage("Before Items");
             // Check on what to auth
             // TDOD: argument could be null?
             List<BaseEntity>[] items;
@@ -233,19 +241,36 @@ namespace Oxide.Plugins
                     return;
             }
 
-            DebugMessage("items found:");
-            DebugMessage("AT: " + items[0].Count);
-            DebugMessage("CL: " + items[1].Count);
-            DebugMessage("CB: " + items[2].Count);
-
+            int counter = 0;
             // Check whether to add or to remove
             if (string.Equals(command, pluginConfig.Commands.ShareCommand))
             {
-                //share
+                
             }
             else if (string.Equals(command, pluginConfig.Commands.UnshareCommand))
             {
-                //unshare
+                foreach(BasePlayer foundPlayer in playerList)
+                {
+                    if (foundPlayer == null || (pluginConfig.General.PreventPlayersFromUnsharingThemself && foundPlayer.userID == player.userID))
+                        continue;
+
+                    foreach(AutoTurret at in items[0])
+                    {
+                        if (RemoveFromWhiteList(at, foundPlayer))
+                            counter++;
+                    }
+                    foreach (CodeLock cl in items[1])
+                    {
+                        if (RemoveFromWhiteList(cl, foundPlayer))
+                            counter++;
+                    }
+                    foreach (BuildingPrivlidge cb in items[2])
+                    {
+                        if (RemoveFromWhiteList(cb, foundPlayer))
+                            counter++;
+                    }
+
+                }
             }
         }
 
@@ -270,9 +295,11 @@ namespace Oxide.Plugins
                         {
                             foundItems[0].Add(entity);
                         }
-                        if (IsBitSet(entityMask, WantedEntityType.CL) && entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>())
+                        if (IsBitSet(entityMask, WantedEntityType.CL) && entity.HasSlot(BaseEntity.Slot.Lock))
                         {
-                            foundItems[1].Add(entity);
+                            BaseEntity cl = entity.GetSlot(BaseEntity.Slot.Lock);
+                            if(cl && cl is CodeLock)
+                                foundItems[1].Add(entity);
                         }
                         if (IsBitSet(entityMask, WantedEntityType.CB) && entity is BuildingPrivlidge)
                         {
@@ -374,6 +401,99 @@ namespace Oxide.Plugins
                 foundPlayer = (BasePlayer)covplayer.Object;
 
             return foundPlayer;
+        }
+
+        private bool AddToWhiteList(AutoTurret at, BasePlayer player)
+        {
+            if (at.IsAuthed(player))
+                return false;
+
+            var protobufPlayer = new ProtoBuf.PlayerNameID();
+            protobufPlayer.userid = player.userID;
+            protobufPlayer.username = player.name;
+
+            at.authorizedPlayers.Add(protobufPlayer);
+
+            return true;
+        }
+        private bool AddToWhiteList(CodeLock cl, BasePlayer player)
+        {
+            if(cl.HasLockPermission(player))
+                return false;
+
+            List<ulong> whitelist = codelockwhitelist.GetValue(cl) as List<ulong>;
+            whitelist.Add(player.userID);
+            codelockwhitelist.SetValue(cl, whitelist);
+            cl.SendNetworkUpdate();
+
+            return true;
+        }
+        private bool AddToWhiteList(BuildingPrivlidge cb, BasePlayer player)
+        {
+            if (cb.IsAuthed(player))
+                return false;
+
+            var protobufPlayer = new ProtoBuf.PlayerNameID();
+            protobufPlayer.userid = player.userID;
+            protobufPlayer.username = player.name;
+
+            cb.authorizedPlayers.Add(protobufPlayer);
+
+            return true;
+        }
+
+        private bool RemoveFromWhiteList(AutoTurret at, BasePlayer player)
+        {
+            if (!at.IsAuthed(player))
+                return false;
+
+            int i = 0;
+            foreach(var authedPlayer in at.authorizedPlayers)
+            {
+                if(authedPlayer.userid == player.userID)
+                {
+                    at.authorizedPlayers.RemoveAt(i);
+                    at.SendNetworkUpdate();
+                    at.SetTarget(null);
+                    return true;
+                }
+                i++;
+            }
+            return false;
+        }
+        private bool RemoveFromWhiteList(CodeLock cl, BasePlayer player)
+        {
+            if (!cl.HasLockPermission(player))
+                return false;
+
+            List<ulong> whitelist = codelockwhitelist.GetValue(cl) as List<ulong>;
+            whitelist.Remove(player.userID);
+            codelockwhitelist.SetValue(cl, whitelist);
+            cl.SendNetworkUpdate();
+
+            return true;
+        }
+        private bool RemoveFromWhiteList(BuildingPrivlidge cb, BasePlayer player)
+        {
+            if (!cb.IsAuthed(player))
+                return false;
+
+            int i = 0;
+            foreach (var authedPlayer in cb.authorizedPlayers)
+            {
+                if (authedPlayer.userid == player.userID)
+                {
+                    cb.authorizedPlayers.RemoveAt(i);
+                    cb.SendNetworkUpdate();
+                    if (cb.CheckEntity(player))
+                        player.SetInsideBuildingPrivilege(cb, false);
+
+                    return true;
+                }
+                i++;
+            }
+
+            return false;
         }
 
         //if(player.net.connection.authLevel < 2)
