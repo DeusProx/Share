@@ -245,7 +245,28 @@ namespace Oxide.Plugins
             // Check whether to add or to remove
             if (string.Equals(command, pluginConfig.Commands.ShareCommand))
             {
-                
+                foreach (BasePlayer foundPlayer in playerList)
+                {
+                    if (foundPlayer == null)
+                        continue;
+
+                    foreach (AutoTurret at in items[0])
+                    {
+                        if (AddToWhiteList(at, foundPlayer))
+                            counter++;
+                    }
+                    foreach (CodeLock cl in items[1])
+                    {
+                        if (AddToWhiteList(cl, foundPlayer))
+                            counter++;
+                    }
+                    foreach (BuildingPrivlidge cb in items[2])
+                    {
+                        if (AddToWhiteList(cb, foundPlayer))
+                            counter++;
+                    }
+
+                }
             }
             else if (string.Equals(command, pluginConfig.Commands.UnshareCommand))
             {
@@ -272,6 +293,11 @@ namespace Oxide.Plugins
 
                 }
             }
+
+            SendReply(player, "Made " + counter + " Whitelist Entries!");
+            SendReply(player, "Found " + items[0].Count + "AutoTurrets");
+            SendReply(player, "Found " + items[1].Count + "CodeLocks");
+            SendReply(player, "Found " + items[2].Count + "Cupboards");
         }
 
         // Finds all entities a player owns on a certain radius & returns them
@@ -413,6 +439,8 @@ namespace Oxide.Plugins
             protobufPlayer.username = player.name;
 
             at.authorizedPlayers.Add(protobufPlayer);
+            at.SendNetworkUpdate();
+            at.SetTarget(null);
 
             return true;
         }
@@ -436,8 +464,10 @@ namespace Oxide.Plugins
             var protobufPlayer = new ProtoBuf.PlayerNameID();
             protobufPlayer.userid = player.userID;
             protobufPlayer.username = player.name;
-
             cb.authorizedPlayers.Add(protobufPlayer);
+            cb.SendNetworkUpdate();
+            if (cb.CheckEntity(player))
+                player.SetInsideBuildingPrivilege(cb, true);
 
             return true;
         }
