@@ -161,17 +161,27 @@ namespace Oxide.Plugins
 
         void cmdShareShort(BasePlayer player, string command, string[] args)
         {
-            // Check for right commands+arguments
-            // TODO .....
+            // Check for right commands+arguments+permission
+            //if(player.net.connection.authLevel < 2)
+            //{
+            //  SendReply(player, "You don´t have the permission to use this command.");
+            //  return;
+            //}
+
+            if ((args == null || args.Length != 2) && (Array.IndexOf(new[] { "at", "cl", "cb", "all" }, args[1].ToLower()) > -1))
+            {
+                ShowCommandHelp(player);
+                return;
+            }
+
+            WantedEntityType wantedType = (WantedEntityType)Enum.Parse(typeof(WantedEntityType), args[1].ToUpper());
 
             // Decide with who to share
-            DebugMessage("A");
             List<BasePlayer> playerList;
             switch (args[0].ToLower())
             {
                 case "clan":
                     playerList = FindClanMember(player);
-                    playerList = FindFriends(player);
                     if (playerList == null || playerList.Count == 0)
                     {
                         SendReply(player, "You don't belong to any clan!");
@@ -203,11 +213,11 @@ namespace Oxide.Plugins
 
             // Check on what to auth
             List<BaseEntity>[] items;
-            items = FindItems(player, pluginConfig.Commands.Radius, (WantedEntityType) Enum.Parse(typeof(WantedEntityType), args[1].ToUpper()));
-            DebugMessage("B");
+            items = FindItems(player, pluginConfig.Commands.Radius, wantedType);
 
-            int counter = 0;
+
             // Check whether to add or to remove
+            int counter = 0;
             if (string.Equals(command, pluginConfig.Commands.ShareCommand))
             {
                 foreach (BasePlayer foundPlayer in playerList)
@@ -216,21 +226,14 @@ namespace Oxide.Plugins
                         continue;
 
                     foreach (AutoTurret at in items[0])
-                    {
                         if (AddToWhiteList(at, foundPlayer))
                             counter++;
-                    }
                     foreach (BaseEntity cl in items[1])
-                    {
                         if (AddToWhiteList(cl.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>(), foundPlayer))
                             counter++;
-                    }
                     foreach (BuildingPrivlidge cb in items[2])
-                    {
                         if (AddToWhiteList(cb, foundPlayer))
                             counter++;
-                    }
-
                 }
             }
             else if (string.Equals(command, pluginConfig.Commands.UnshareCommand))
@@ -241,42 +244,34 @@ namespace Oxide.Plugins
                         continue;
 
                     foreach (AutoTurret at in items[0])
-                    {
                         if (RemoveFromWhiteList(at, foundPlayer))
                             counter++;
-                    }
-                    foreach (CodeLock cl in items[1])
-                    {
+                    foreach (BaseEntity cl in items[1])
                         if (RemoveFromWhiteList(cl.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>(), foundPlayer))
                             counter++;
-                    }
                     foreach (BuildingPrivlidge cb in items[2])
-                    {
                         if (RemoveFromWhiteList(cb, foundPlayer))
                             counter++;
-                    }
-
                 }
             }
 
             // Respond to player what has been done
-            SendReply(player, buildAnswer(counter, items[0].Count, items[1].Count, items[2].Count, command, (WantedEntityType)Enum.Parse(typeof(WantedEntityType), args[1].ToUpper())));
+            SendReply(player, buildAnswer(counter, items[0].Count, items[1].Count, items[2].Count, command, wantedType));
         }
 
         private string buildAnswer(int createdWLEntries, int foundAT, int foundCL, int foundCB, string command, WantedEntityType type)
         {
             var sb = new StringBuilder();
-
+            if (IsBitSet(type, WantedEntityType.AT))
+                sb.AppendLine("Found   " + foundAT + " AutoTurrets!");
+            if (IsBitSet(type, WantedEntityType.CL))
+                sb.AppendLine("Found   " + foundCL + " CodeLocks!");
+            if (IsBitSet(type, WantedEntityType.CB))
+                sb.AppendLine("Found   " + foundCB + " Cupboards!");
             if (string.Equals(command, pluginConfig.Commands.ShareCommand))
                 sb.AppendLine("Created " + createdWLEntries + " Whitelist Entries!");
             else if (string.Equals(command, pluginConfig.Commands.UnshareCommand))
                 sb.AppendLine("Deleted " + createdWLEntries + " Whitelist Entries!");
-            if (IsBitSet(type, WantedEntityType.AT))
-                sb.AppendLine("Found " + foundAT + " AutoTurrets");
-            if (IsBitSet(type, WantedEntityType.CL))
-                sb.AppendLine("Found " + foundCL + " CodeLocks");
-            if (IsBitSet(type, WantedEntityType.CB))
-                sb.AppendLine("Found " + foundCB + " Cupboards");
 
             return sb.ToString();
         }
@@ -299,17 +294,11 @@ namespace Oxide.Plugins
                     if (entity.OwnerID == player.userID)
                     {
                         if (IsBitSet(entityMask, WantedEntityType.AT) && entity is AutoTurret)
-                        {
                             foundItems[0].Add(entity);
-                        }
                         if (IsBitSet(entityMask, WantedEntityType.CL) && entity.HasSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock) && entity.GetSlot(BaseEntity.Slot.Lock).GetComponent<CodeLock>())
-                        {
                             foundItems[1].Add(entity);
-                        }
                         if (IsBitSet(entityMask, WantedEntityType.CB) && entity is BuildingPrivlidge)
-                        {
                             foundItems[2].Add(entity);
-                        }
                     }
                 }
 
@@ -332,9 +321,7 @@ namespace Oxide.Plugins
             {
                 BasePlayer foundPlayer = FindPlayer(userID);
                 if (foundPlayer)
-                {
                     friends.Add(foundPlayer);
-                }
             }
 
             return friends;
@@ -364,9 +351,7 @@ namespace Oxide.Plugins
                                 continue;
                             BasePlayer foundPlayer = FindPlayer(member);
                             if (foundPlayer)
-                            {
                                 clanMember.Add(foundPlayer);
-                            }
                         }
                     }
                 }
@@ -425,14 +410,9 @@ namespace Oxide.Plugins
         }
         private bool AddToWhiteList(CodeLock cl, BasePlayer player)
         {
-            if (cl.HasLockPermission(player))
-            {
-                DebugMessage(player.name + " already has lock permission");
-                return false;
-            }
-                
-
             List<ulong> whitelist = codelockwhitelist.GetValue(cl) as List<ulong>;
+            if (whitelist.Contains(player.userID))
+                return false;
             whitelist.Add(player.userID);
             codelockwhitelist.SetValue(cl, whitelist);
             cl.SendNetworkUpdate();
@@ -476,15 +456,9 @@ namespace Oxide.Plugins
         }
         private bool RemoveFromWhiteList(CodeLock cl, BasePlayer player)
         {
-            if (!cl.HasLockPermission(player))
-            {
-                DebugMessage(player.name + " has no lock permission");
-                return false;
-            }
-            if (!cl.HasLockPermission(player))
-                return false;
-
             List<ulong> whitelist = codelockwhitelist.GetValue(cl) as List<ulong>;
+            if (!whitelist.Contains(player.userID))
+                return false;
             whitelist.Remove(player.userID);
             codelockwhitelist.SetValue(cl, whitelist);
             cl.SendNetworkUpdate();
@@ -514,27 +488,6 @@ namespace Oxide.Plugins
             return false;
         }
 
-        //if(player.net.connection.authLevel < 2)
-        //{
-        //  SendReply(player, "You don´t have the permission to use this command.");
-        //  return;
-        //}
-
-        /*if (args == null || args.Length < 2 || args.Length > 3)
-        {
-            ShowCommandHelp(player);
-            return;
-        }
-
-
-        if (args.Length == 2 || args.Length == 3)
-        {
-            bCodelock = args[args.Length - 1].ToLower() == "cl" || args[args.Length - 1].ToLower() == "all";
-            bCupboard = args[args.Length - 1].ToLower() == "cb" || args[args.Length - 1].ToLower() == "all";
-            bAutoturret = args[args.Length - 1].ToLower() == "at" || args[args.Length - 1].ToLower() == "all";
-        }*/
-
-
         [HookMethod("SendHelpText")]
         private void ShowCommandHelp(BasePlayer player)
         {
@@ -555,10 +508,6 @@ namespace Oxide.Plugins
 
             SendReply(player, sb.ToString());
         }
-        #endregion
-
-        #region Messages
-        public void DebugMessage(string msg) { Debug.Log("[Share] " + msg); }
         #endregion
     }
 }
