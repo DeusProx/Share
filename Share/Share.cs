@@ -47,15 +47,15 @@ namespace Oxide.Plugins
             // Check if all dependencies are there
             Friends = plugins.Find("Friends");
             if (Friends == null)
-                DebugMessage("Friends Plugin not found");
+                Logging("Friends Plugin not found");
             else
-                DebugMessage("Friends Plugin found");
+                Logging("Friends Plugin found");
 
             Clans = plugins.Find("Clans");
             if (Clans == null)
-                DebugMessage("Clans Plugin not found");
+                Logging("Clans Plugin not found");
             else
-                DebugMessage("Clans Plugin found");
+                Logging("Clans Plugin found");
 
             // Load the config file
             LoadFromConfigFile();
@@ -66,16 +66,16 @@ namespace Oxide.Plugins
 
             // Register Commands
             if (string.IsNullOrEmpty(pluginConfig.Commands.ShareCommand))
-                DebugMessage("No valid ShareCommand in config.");
+                Logging("No valid ShareCommand in config.");
             else
                 cmd.AddChatCommand(pluginConfig.Commands.ShareCommand, this, "cmdShareShort");
 
             if (string.IsNullOrEmpty(pluginConfig.Commands.UnshareCommand))
-                DebugMessage("No valid UnshareCommand in config.");
+                Logging("No valid UnshareCommand in config.");
             else
             {
                 if (string.Equals(pluginConfig.Commands.ShareCommand, pluginConfig.Commands.UnshareCommand))
-                    DebugMessage("ShareCommand & UnshareCommand are the same.");
+                    Logging("ShareCommand & UnshareCommand are the same.");
                 else
                     cmd.AddChatCommand(pluginConfig.Commands.UnshareCommand, this, "cmdShareShort");
             }
@@ -259,6 +259,29 @@ namespace Oxide.Plugins
             SendReply(player, buildAnswer(counter, items[0].Count, items[1].Count, items[2].Count, command, wantedType));
         }
 
+        [HookMethod("SendHelpText")]
+        private void ShowCommandHelp(BasePlayer player)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("<size=16>Share</size> by DeusProx");
+            sb.AppendLine("<size=12>Shares items with other players in a " + pluginConfig.Commands.Radius + "m radius around you.</size>");
+            sb.AppendLine("<size=1> </size>");
+
+            sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " <who> <what></color>");
+            sb.AppendLine("<size=12>Shares the item <what> with every player <who></size>");
+            sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.UnshareCommand + " <who> <what></color>");
+            sb.AppendLine("<size=12>Unshares the item <what> with every player <who></size>");
+            sb.AppendLine("<size=1> </size>");
+
+            sb.AppendLine("<color=#FFD479><who></color><size=12> can be <color=orange>clan</color>, <color=orange>friends</color> or a player name</size>");
+            sb.AppendLine("<color=#FFD479><what></color><size=12> can be <color=orange>at</color>(AutoTurrets), <color=orange>cl</color>(Codelocks), <color=orange>cb</color>(Cupboards) or <color=orange>all</color></size>");
+            sb.AppendLine("<size=12>Example: <color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " \"Ser Winter\" all</color></size>");
+
+            SendReply(player, sb.ToString());
+        }
+        #endregion
+
+        #region Functions
         private string buildAnswer(int createdWLEntries, int foundAT, int foundCL, int foundCB, string command, WantedEntityType type)
         {
             var sb = new StringBuilder();
@@ -488,26 +511,7 @@ namespace Oxide.Plugins
             return false;
         }
 
-        [HookMethod("SendHelpText")]
-        private void ShowCommandHelp(BasePlayer player)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("<size=16>Share</size> by DeusProx");
-            sb.AppendLine("<size=12>Shares items with other players in a " + pluginConfig.Commands.Radius + "m radius around you.</size>");
-            sb.AppendLine("<size=1> </size>");
-
-            sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " <who> <what></color>");
-            sb.AppendLine("<size=12>Shares the item <what> with every player <who></size>");
-            sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.UnshareCommand + " <who> <what></color>");
-            sb.AppendLine("<size=12>Unshares the item <what> with every player <who></size>");
-            sb.AppendLine("<size=1> </size>");
-
-            sb.AppendLine("<color=#FFD479><who></color><size=12> can be <color=orange>clan</color>, <color=orange>friends</color> or a player name</size>");
-            sb.AppendLine("<color=#FFD479><what></color><size=12> can be <color=orange>at</color>(AutoTurrets), <color=orange>cl</color>(Codelocks), <color=orange>cb</color>(Cupboards) or <color=orange>all</color></size>");
-            sb.AppendLine("<size=12>Example: <color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " \"Ser Winter\" all</color></size>");
-
-            SendReply(player, sb.ToString());
-        }
+        public void Logging(string msg) { Debug.Log("[Share] " + msg); }
         #endregion
     }
 }
