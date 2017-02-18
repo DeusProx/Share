@@ -105,6 +105,7 @@ namespace Oxide.Plugins
             public bool UsePermission { get; set; }
             public string PermissionName { get; set; }
             public bool PreventPlayersFromUnsharingThemself { get; set; }
+            public bool PreventPlayersFromSharingUnowned { get; set; }
             public bool ChangeOwnerIDOnCodeLockDeployed { get; set; }
         }
         class Commands
@@ -131,7 +132,8 @@ namespace Oxide.Plugins
                     ChatPrefix = "<color=cyan>[Share]</color>",
                     UsePermission = false,
                     PermissionName = "share",
-                    PreventPlayersFromUnsharingThemself = true,
+                    PreventPlayersFromUnsharingThemself = false,
+                    PreventPlayersFromSharingUnowned = false,  // TODO
                     ChangeOwnerIDOnCodeLockDeployed = true
                 },
                 Commands = new Commands
@@ -148,29 +150,6 @@ namespace Oxide.Plugins
         }
         #endregion
 
-        /*#region Strange
-        class ARPlayer
-        {
-            public string name;
-            public ulong id;
-            public BasePlayer basePlayer;
-
-            public ARPlayer(ulong id, string name)
-            {
-                this.id = id;
-                this.name = name;
-                this.basePlayer = null;
-            }
-
-            public ARPlayer(BasePlayer bp)
-            {
-                name = bp.displayName;
-                id = bp.userID;
-                basePlayer = bp;
-            }
-        }
-        #endregion*/
-
         #region Commands
         // if someone writes /share in the chat give him the help text
         [ChatCommand("share")]
@@ -182,11 +161,11 @@ namespace Oxide.Plugins
 
         void cmdShareShort(BasePlayer player, string command, string[] args)
         {
-            DebugMessage("Called me!");
             // Check for right commands+arguments
             // TODO .....
 
             // Decide with who to share
+            DebugMessage("A");
             List<BasePlayer> playerList;
             switch (args[0].ToLower())
             {
@@ -223,27 +202,9 @@ namespace Oxide.Plugins
             }
 
             // Check on what to auth
-            // TDOD: argument could be null?
             List<BaseEntity>[] items;
-            /*switch (args[1].ToLower())
-            {
-                case "at":
-                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.AT);
-                    break;
-                case "cl":
-                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.CL);
-                    break;
-                case "cb":
-                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.CB);
-                    break;
-                case "all":
-                    items = FindItems(player, pluginConfig.Commands.Radius, WantedEntityType.ALL);
-                    break;
-                default:
-                    return;
-            }*/
             items = FindItems(player, pluginConfig.Commands.Radius, (WantedEntityType) Enum.Parse(typeof(WantedEntityType), args[1].ToUpper()));
-            
+            DebugMessage("B");
 
             int counter = 0;
             // Check whether to add or to remove
@@ -298,16 +259,23 @@ namespace Oxide.Plugins
                 }
             }
 
-            SendReply(player, buildAnswer(counter, items[0].Count, items[1].Count, items[2].Count, (WantedEntityType)Enum.Parse(typeof(WantedEntityType), args[1].ToUpper())));
+            // Respond to player what has been done
+            SendReply(player, buildAnswer(counter, items[0].Count, items[1].Count, items[2].Count, args[0], (WantedEntityType)Enum.Parse(typeof(WantedEntityType), args[1].ToUpper())));
         }
 
-        private string buildAnswer(int createdWLEntries, int foundAT, int foundCL, int foundCB, WantedEntityType type)
+        private string buildAnswer(int createdWLEntries, int foundAT, int foundCL, int foundCB, string command, WantedEntityType type)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("Made " + createdWLEntries + " Whitelist Entries!");
-            sb.AppendLine("Found " + foundAT + " AutoTurrets");
-            sb.AppendLine("Found " + foundCL + " CodeLocks");
-            sb.AppendLine("Found " + foundCB + " Cupboards");
+            if (string.Equals(command, pluginConfig.Commands.ShareCommand))
+                sb.AppendLine("Created" + createdWLEntries + " Whitelist Entries!");
+            else if (string.Equals(command, pluginConfig.Commands.UnshareCommand))
+                sb.AppendLine("Deleted" + createdWLEntries + " Whitelist Entries!");
+            if (IsBitSet(type, WantedEntityType.AT))
+                sb.AppendLine("Found " + foundAT + " AutoTurrets");
+            if (IsBitSet(type, WantedEntityType.CL))
+                sb.AppendLine("Found " + foundCL + " CodeLocks");
+            if (IsBitSet(type, WantedEntityType.CB))
+                sb.AppendLine("Found " + foundCB + " Cupboards");
 
             return sb.ToString();
         }
