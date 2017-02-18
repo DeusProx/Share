@@ -260,16 +260,17 @@ namespace Oxide.Plugins
             }
 
             // Respond to player what has been done
-            SendReply(player, buildAnswer(counter, items[0].Count, items[1].Count, items[2].Count, args[0], (WantedEntityType)Enum.Parse(typeof(WantedEntityType), args[1].ToUpper())));
+            SendReply(player, buildAnswer(counter, items[0].Count, items[1].Count, items[2].Count, command, (WantedEntityType)Enum.Parse(typeof(WantedEntityType), args[1].ToUpper())));
         }
 
         private string buildAnswer(int createdWLEntries, int foundAT, int foundCL, int foundCB, string command, WantedEntityType type)
         {
             var sb = new StringBuilder();
+
             if (string.Equals(command, pluginConfig.Commands.ShareCommand))
-                sb.AppendLine("Created" + createdWLEntries + " Whitelist Entries!");
+                sb.AppendLine("Created " + createdWLEntries + " Whitelist Entries!");
             else if (string.Equals(command, pluginConfig.Commands.UnshareCommand))
-                sb.AppendLine("Deleted" + createdWLEntries + " Whitelist Entries!");
+                sb.AppendLine("Deleted " + createdWLEntries + " Whitelist Entries!");
             if (IsBitSet(type, WantedEntityType.AT))
                 sb.AppendLine("Found " + foundAT + " AutoTurrets");
             if (IsBitSet(type, WantedEntityType.CL))
@@ -424,6 +425,11 @@ namespace Oxide.Plugins
         }
         private bool AddToWhiteList(CodeLock cl, BasePlayer player)
         {
+            if(!cl)
+            {
+                DebugMessage("IsNull");
+                return false;
+            }
             if (cl.HasLockPermission(player))
                 return false;
 
@@ -471,6 +477,11 @@ namespace Oxide.Plugins
         }
         private bool RemoveFromWhiteList(CodeLock cl, BasePlayer player)
         {
+            if (!cl)
+            {
+                DebugMessage("IsNull");
+                return false;
+            }
             if (!cl.HasLockPermission(player))
                 return false;
 
