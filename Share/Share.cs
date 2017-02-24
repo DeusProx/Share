@@ -13,7 +13,7 @@ using UnityEngine;
 namespace Oxide.Plugins
 {
 
-    [Info("Share", "DeusProx", "0.1.0", ResourceId = 0000)]
+    [Info("Share", "DyingRust.de", "0.1.0", ResourceId = 0000)]
     [Description("Share cupboards, codelocks and autoturrets")]
     public class Share : RustPlugin
     {
@@ -59,6 +59,9 @@ namespace Oxide.Plugins
 
             // Load the config file
             LoadFromConfigFile();
+
+            cmd.AddChatCommand("share", this, "cmdShare");
+            cmd.AddChatCommand("sh", this, "cmdShare");
 
             // Unsubscribe from Hooks if necessary
             if (!pluginConfig.General.ChangeOwnerIDOnCodeLockDeployed)
@@ -152,7 +155,6 @@ namespace Oxide.Plugins
 
         #region Commands
         // if someone writes /share in the chat give him the help text
-        [ChatCommand("share")]
         void cmdShare(BasePlayer player, string command, string[] args)
         {
             ShowCommandHelp(player);
@@ -263,13 +265,13 @@ namespace Oxide.Plugins
         private void ShowCommandHelp(BasePlayer player)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("<size=16>Share</size> by DeusProx");
+            sb.AppendLine("<size=16>Share</size> by DyingRust.de");
             sb.AppendLine("<size=12>Shares items with other players in a " + pluginConfig.Commands.Radius + "m radius around you.</size>");
             sb.AppendLine("<size=1> </size>");
 
-            sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.ShareCommand + " <who> <what></color>");
+            sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.ShareCommand + "  <who>  <what></color>");
             sb.AppendLine("<size=12>Shares the item <what> with every player <who></size>");
-            sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.UnshareCommand + " <who> <what></color>");
+            sb.AppendLine("<color=#FFD479>/" + pluginConfig.Commands.UnshareCommand + "  <who>  <what></color>");
             sb.AppendLine("<size=12>Unshares the item <what> with every player <who></size>");
             sb.AppendLine("<size=1> </size>");
 
